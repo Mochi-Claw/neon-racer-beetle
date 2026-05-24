@@ -18,8 +18,7 @@ HORIZON_Y = HEIGHT // 2
 
 # Perspective Settings
 MAX_Z = 25.0        # How "deep" the world is
-HORIZON_WIDTH_FACTOR = 0.6 # The width of the road at the horizon (0.0 to 1.0)
-# This helps avoid the "point" vanishing by making the horizon a line/band
+HORIZON_WIDTH_FACTOR = 0.4 # Narrower horizon for more dramatic perspective
 
 # --- CLASSES ---
 
@@ -48,17 +47,14 @@ class Player:
 
 def get_perspective_params(z):
     """Returns scaling and position factors based on depth z."""
-    # We use a non-linear curve for scaling: things stay small longer then grow.
-    # scale = (z / MAX_Z)^exponent
-    # A power <<  1 makes it grow faster early, a power > 1 makes it grow later.
-    # We want a power > 1 to keep things "small" in the distance.
-    scale = math.pow(z / MAX_Z, 1.5)
+    # Non-linear scaling: things stay small longer then grow.
+    scale = math.pow(z / MAX_Z, 1.7) 
     return scale
 
 class EnemyCar:
     def __init__(self, lane_x):
         self.lane_x = lane_x  # Relative to road center (-100 to 100)
-        self.z = 0.1          # Start slightly away from absolute zero to avoid division/scaling issues
+        self.z = 0.1          # Depth (0 = horizon, 20 = player)
         self.speed = 0.15     
         self.width = 70       
         self.height = 45      
@@ -74,11 +70,9 @@ class EnemyCar:
         draw_w = self.width * scale
         draw_h = self.height * scale
         
-        # Map z to Y position
         y = HORIZON_Y + (self.z / MAX_Z) * (HEIGHT - HORIZON_Y)
         
         # Road width at this Y
-        # We use the HORIZON_WIDTH_FACTOR to ensure the road isn't a single point
         current_horizon_width = WIDTH * HORIZON_WIDTH_FACTOR
         road_width_at_y = current_horizon_width + (y - HORIZON_Y) * (2.5 / HORIZON_WIDTH_FACTOR)
         
@@ -88,7 +82,6 @@ class EnemyCar:
         
         if self.rect.width > 1:
             pygame.draw.rect(surface, self.color, self.rect)
-            # Taillights
             pygame.draw.rect(surface, (255, 50, 50), (x, y - draw_h + draw_h - 5, draw_w*0.2, draw_h*0.2))
             pygame.draw.rect(surface, (255, 50, 50), (x + draw_w*0.8, y - draw_h + draw_h - 5, draw_w*0.2, draw_h*0.2))
 
@@ -114,9 +107,7 @@ class PalmTree:
         
         x = center_x + (self.side * (road_width_at_y / 2 + self.base_x_offset * scale))
         
-        # Draw Trunk
         pygame.draw.rect(surface, (40, 20, 0), (x - 2*scale, y - tree_h, 4*scale, tree_h))
-        # Draw Fronds
         pygame.draw.circle(surface, NEON_CYAN, (int(x), int(y - tree_h)), int(15*scale), 2)
 
 class Road:
@@ -144,7 +135,6 @@ class Road:
             
             color = GRID_COLOR_1 if int(z + self.offset/self.grid_size) % 2 == 0 else GRID_COLOR_2
             
-            # Glow
             glow_rect = pygame.Surface((end_x - start_x + 4, 3), pygame.SRCALPHA)
             glow_rect.fill((*color, 60))
             surface.blit(glow_rect, (start_x - 2, y - 1))
