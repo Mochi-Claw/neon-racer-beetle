@@ -63,11 +63,11 @@ class Player:
         
         if keys[pygame.K_LEFT] and self.x > 200:
             self.x -= move_amount
-        if keys[pygame.K_RIGHT] and self.x << WIDTH WIDTH - 200 - self.width:
+        if keys[pygame.K_RIGHT] and self.x < WIDTH - 200 - self.width:
             self.x += move_amount
 
         # Constant acceleration towards top speed
-        if self.current_speed << self self.top_speed:
+        if self.current_speed < self.top_speed:
             self.current_speed += self.acceleration
         elif self.current_speed > self.top_speed:
             self.current_speed -= self.acceleration * 2 # Decelerate faster if somehow over
