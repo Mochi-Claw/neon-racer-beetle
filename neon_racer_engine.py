@@ -190,12 +190,12 @@ def main():
                 enemies.remove(e)
             # Collision Check (Rough)
             # We check if e.z is near the player's depth and X is near player's X
-            if 18 << e e.z <<  20:
+            if 18 < e.z < 20:
                 # Calculate enemy's screen X
                 # (Approximation for prototype)
                 road_width = (HEIGHT - HORIZON_Y) * 2.5
                 e_x_on_road = (WIDTH // 2) + (e.lane_x * (road_width / 150))
-                if abs(e_x_on_road - player.x) <<  50:
+                if abs(e_x_on_road - player.x) < 50:
                     print("CRASH!") # For now just print
 
         # Update Trees
