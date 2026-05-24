@@ -59,43 +59,39 @@ class Road:
         
         # 1. Draw Horizontal Lines (Z-axis movement)
         for i in range(0, 20): 
-            # This simulates perspective by spacing lines closer together as they approach horizon
-            # But for a simple "infinite" feel, we'll just use a moving offset
             z = (i + self.offset / self.grid_size) % 20
-            # Scale y based on "depth" (z)
-            # z=0 is horizon, z=20 is player
-            # We use a non-linear scale for true perspective: y = horizon + (1 - 1/z) * (height-horizon)
-            # To keep it simple for the prototype, let's use a linear-ish pseudo-3D
             y = HORIZON_Y + (z / 20) * (HEIGHT - HORIZON_Y)
             
-            # Width of the road at this Y
             road_width_at_y = (y - HORIZON_Y) * 2.5
             start_x = center_x - (road_width_at_y / 2)
             end_x = center_x + (road_width_at_y / 2)
             
-            # Checkerboard color toggle
             color = GRID_COLOR_1 if int(z + self.offset/self.grid_size) % 2 == 0 else GRID_COLOR_2
-            pygame.draw.line(surface, color, (start_x, y), (end_x, y), 2)
+            
+            # Draw a "glow" line first (slightly thicker and transparent)
+            glow_rect = pygame.Surface((end_x - start_x + 4, 3), pygame.SRCALPHA)
+            glow_rect.fill((*color, 60))
+            surface.blit(glow_rect, (start_x - 2, y - 1))
+            
+            # Draw the main anti-aliased line
+            pygame.draw.aaline(surface, color, (start_x, y), (end_x, y))
 
         # 2. Draw Vertical Lines (X-axis convergence)
-        for i in range(-5, 6): # 11 lines total
-            # Lines spread out from the center
-            # As they get closer (y increases), the distance between them increases
+        for i in range(-5, 6):
             for j in range(20):
                 z = (j + self.offset / self.grid_size) % 20
                 y = HORIZON_Y + (z / 20) * (HEIGHT - HORIZON_Y)
                 
                 road_width_at_y = (y - HORIZON_Y) * 2.5
-                # Calculate where the vertical line is relative to the road width
-                # i=-5 is far left, i=0 is center, i=5 is far right
                 line_x = center_x + (i * (road_width_at_y / 6))
                 
-                # Draw a small segment to prevent massive vertical lines
                 next_z = (j + 1 + self.offset / self.grid_size) % 20
                 next_y = HORIZON_Y + (next_z / 20) * (HEIGHT - HORIZON_Y)
                 
                 color = GRID_COLOR_1 if int(j + self.offset/self.grid_size) % 2 == 0 else GRID_COLOR_2
-                pygame.draw.line(surface, color, (line_x, y), (line_x, next_y), 1)
+                
+                # Draw anti-aliased vertical segments
+                pygame.draw.aaline(surface, color, (line_x, y), (line_x, next_y))
 
 # --- MAIN LOOP ---
 
