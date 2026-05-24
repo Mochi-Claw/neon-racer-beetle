@@ -29,7 +29,7 @@ class Player:
     def move(self, keys):
         if keys[pygame.K_LEFT] and self.x > 200:
             self.x -= self.speed
-        if keys[pygame.K_RIGHT] and self.x << WIDTH WIDTH - 200 - self.width:
+        if keys[pygame.K_RIGHT] and self.x < WIDTH - 200 - self.width:
             self.x += self.speed
 
     def draw(self, surface):
