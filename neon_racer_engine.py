@@ -38,15 +38,18 @@ class Player:
         pygame.draw.rect(surface, NEON_PINK, (self.x, self.y + 30, 15, 5))
         pygame.draw.rect(surface, NEON_PINK, (self.x + self.width - 15, self.y + 30, 15, 5))
 
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
 class EnemyCar:
     def __init__(self, lane_x):
         self.lane_x = lane_x  # The fixed X coordinate on the road
         self.z = 0            # Depth (0 = horizon, 20 = player)
-        self.speed = 0.2      # How fast it approaches
-        self.width = 40
-        self.height = 25
+        self.speed = 0.12     # Slower approach for better gameplay
+        self.width = 70       # Larger base size
+        self.height = 45      # Larger base size
         self.color = random.choice([NEON_CYAN, NEON_PURPLE, MAGENTA])
-        self.passed = False
+        self.rect = None      # Calculated every frame for collision
 
     def update(self):
         self.z += self.speed
@@ -58,19 +61,13 @@ class EnemyCar:
         draw_w = self.width * scale
         draw_h = self.height * scale
         
-        # Calculate screen position
-        # As z increases, y moves from HORIZON_Y towards the bottom
         y = HORIZON_Y + (self.z / 20) * (HEIGHT - HORIZON_Y)
-        
-        # Calculate X position based on the road width at that Y
         road_width_at_y = (y - HORIZON_Y) * 2.5
-        # Map the lane_x (which is relative to road center) to screen X
-        # lane_x is -100 to 100 (roughly)
         x = center_x + (self.lane_x * (road_width_at_y / 150)) - (draw_w / 2)
         
-        # Draw the car
-        rect = pygame.Rect(x, y - draw_h, draw_w, draw_h)
-        pygame.draw.rect(surface, self.color, rect)
+        self.rect = pygame.Rect(x, y - draw_h, draw_w, draw_h)
+        
+        pygame.draw.rect(surface, self.color, self.rect)
         # Taillights
         pygame.draw.rect(surface, (255, 50, 50), (x, y - draw_h + draw_h - 5, draw_w*0.2, draw_h*0.2))
         pygame.draw.rect(surface, (255, 50, 50), (x + draw_w*0.8, y - draw_h + draw_h - 5, draw_w*0.2, draw_h*0.2))
@@ -80,7 +77,7 @@ class PalmTree:
         self.side = side # -1 for left, 1 for right
         self.z = 0
         self.speed = 0.15
-        self.base_x_offset = 250 # Distance from center at horizon
+        self.base_x_offset = 250 
         self.height = 80
 
     def update(self):
@@ -91,14 +88,10 @@ class PalmTree:
         scale = (self.z / 20)
         tree_h = self.height * scale
         y = HORIZON_Y + (self.z / 20) * (HEIGHT - HORIZON_Y)
-        
         road_width_at_y = (y - HORIZON_Y) * 2.5
-        # Place trees on the outside of the road
         x = center_x + (self.side * (road_width_at_y / 2 + self.base_x_offset * scale))
         
-        # Draw Trunk
         pygame.draw.rect(surface, (40, 20, 0), (x - 2*scale, y - tree_h, 4*scale, tree_h))
-        # Draw Fronds (simple triangles/lines)
         pygame.draw.circle(surface, NEON_CYAN, (int(x), int(y - tree_h)), int(15*scale), 2)
 
 class Road:
@@ -114,7 +107,6 @@ class Road:
         pygame.draw.rect(surface, BLACK, (0, 0, WIDTH, HORIZON_Y))
         center_x = WIDTH // 2
         
-        # 1. Draw Horizontal Lines
         for i in range(0, 20): 
             z = (i + self.offset / self.grid_size) % 20
             y = HORIZON_Y + (z / 20) * (HEIGHT - HORIZON_Y)
@@ -124,13 +116,11 @@ class Road:
             
             color = GRID_COLOR_1 if int(z + self.offset/self.grid_size) % 2 == 0 else GRID_COLOR_2
             
-            # Glow
             glow_rect = pygame.Surface((end_x - start_x + 4, 3), pygame.SRCALPHA)
             glow_rect.fill((*color, 60))
             surface.blit(glow_rect, (start_x - 2, y - 1))
             pygame.draw.aaline(surface, color, (start_x, y), (end_x, y))
 
-        # 2. Draw Vertical Lines
         for i in range(-5, 6):
             for j in range(20):
                 z = (j + self.offset / self.grid_size) % 20
@@ -158,6 +148,7 @@ def main():
     
     spawn_timer = 0
     tree_timer = 0
+    score = 0
 
     running = True
     while running:
@@ -168,42 +159,34 @@ def main():
         keys = pygame.key.get_pressed()
         player.move(keys)
 
-        # Spawning Logic
         spawn_timer += 1
-        if spawn_timer > 40: # Spawn enemy car
+        if spawn_timer > 60: # Slightly slower spawn rate
             lane = random.choice([-80, -40, 0, 40, 80])
             enemies.append(EnemyCar(lane))
             spawn_timer = 0
             
         tree_timer += 1
-        if tree_timer > 30: # Spawn palm tree
+        if tree_timer > 40:
             side = random.choice([-1, 1])
             trees.append(PalmTree(side))
             tree_timer = 0
 
-        # Update
         road.update()
         
-        # Update Enemies
         for e in enemies[:]:
             if e.update():
                 enemies.remove(e)
-            # Collision Check (Rough)
-            # We check if e.z is near the player's depth and X is near player's X
-            if 18 < e.z < 20:
-                # Calculate enemy's screen X
-                # (Approximation for prototype)
-                road_width = (HEIGHT - HORIZON_Y) * 2.5
-                e_x_on_road = (WIDTH // 2) + (e.lane_x * (road_width / 150))
-                if abs(e_x_on_road - player.x) < 50:
-                    print("CRASH!") # For now just print
+                score += 10
+            
+            # BETTER COLLISION: check if the calculated rect actually overlaps player rect
+            if e.rect and player.get_rect().colliderect(e.rect):
+                print("CRASH!")
+                # In a real game we'd reset here, but for now just print
 
-        # Update Trees
         for t in trees[:]:
             if t.update():
                 trees.remove(t)
 
-        # Draw
         screen.fill(BLACK)
         road.draw(screen)
         
