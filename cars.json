@@ -1,0 +1,28 @@
+{
+  "cars": [
+    {
+      "id": "speedster_01",
+      "name": "Neon Streak",
+      "top_speed": 15.0,
+      "acceleration": 0.2,
+      "handling": 8.0,
+      "health": 2
+    },
+    {
+      "id": "tank_01",
+      "name": "Iron Wall",
+      "top_speed": 7.0,
+      "acceleration": 0.05,
+      "handling": 3.0,
+      "health": 6
+    },
+    {
+      "id": "balanced_01",
+      "name": "Cyber Cruiser",
+      "top_speed": 10.0,
+      "acceleration": 0.1,
+      "handling": 5.0,
+      "health": 4
+    }
+  ]
+}
