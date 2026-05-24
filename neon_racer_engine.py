@@ -1,6 +1,8 @@
 import pygame
 import math
 import random
+import json
+import os
 
 # --- CONFIGURATION ---
 WIDTH, HEIGHT = 800, 600
@@ -23,24 +25,71 @@ HORIZON_WIDTH_FACTOR = 0.4 # Narrower horizon for more dramatic perspective
 # --- CLASSES ---
 
 class Player:
-    def __init__(self):
+    def __init__(self, car_id=None):
         self.width = 60
         self.height = 40
         self.x = WIDTH // 2
         self.y = HEIGHT - 100
-        self.speed = 8
+        
+        # Default stats
+        self.top_speed = 8
+        self.acceleration = 0.1
+        self.handling = 5
+        self.health = 3
+        self.current_speed = 0
+        
+        if car_id:
+            self.load_car_stats(car_id)
+
+    def load_car_stats(self, car_id):
+        try:
+            # Using relative path from the script's directory to be safe
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            with open(os.path.join(base_dir, "cars.json"), "r") as f:
+                data = json.load(f)
+                for car in data["cars"]:
+                    if car["id"] == car_id:
+                        self.top_speed = car["top_speed"]
+                        self.acceleration = car["acceleration"]
+                        self.handling = car["handling"]
+                        self.health = car["health"]
+                        break
+        except Exception as e:
+            print(f"Error loading car stats: {e}")
 
     def move(self, keys):
+        # Handling affects how much we can change x
+        move_amount = self.handling * 0.5
+        
         if keys[pygame.K_LEFT] and self.x > 200:
-            self.x -= self.speed
-        if keys[pygame.K_RIGHT] and self.x < WIDTH - 200 - self.width:
-            self.x += self.speed
+            self.x -= move_amount
+        if keys[pygame.K_RIGHT] and self.x << WIDTH WIDTH - 200 - self.width:
+            self.x += move_amount
+
+        # Constant acceleration towards top speed
+        if self.current_speed << self self.top_speed:
+            self.current_speed += self.acceleration
+        elif self.current_speed > self.top_speed:
+            self.current_speed -= self.acceleration * 2 # Decelerate faster if somehow over
+
+    def take_damage(self, amount):
+        self.health -= amount
+        self.current_speed = 0 # Crash penalty!
+        print(f"CRASH! Health: {self.health}")
 
     def draw(self, surface):
+        # Draw car body
         rect = pygame.Rect(self.x, self.y, self.width, self.height)
         pygame.draw.rect(surface, (255, 255, 255), rect)
         pygame.draw.rect(surface, NEON_PINK, (self.x, self.y + 30, 15, 5))
         pygame.draw.rect(surface, NEON_PINK, (self.x + self.width - 15, self.y + 30, 15, 5))
+        
+        # Simple Health Bar
+        bar_width = 60
+        bar_height = 5
+        health_ratio = max(0, self.health / 6) # Assuming max 6 for scale
+        pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y - 10, bar_width, bar_height))
+        pygame.draw.rect(surface, NEON_CYAN, (self.x, self.y - 10, bar_width * health_ratio, bar_height))
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
@@ -163,7 +212,8 @@ def main():
     pygame.display.set_caption("Neon Beetle: Cyberpunk Racer")
     clock = pygame.time.Clock()
 
-    player = Player()
+    # Load a default car for testing
+    player = Player(car_id="speedster_01")
     road = Road()
     
     enemies = []
@@ -200,9 +250,10 @@ def main():
             if e.update():
                 enemies.remove(e)
                 score += 10
-            
-            if e.rect and player.get_rect().colliderect(e.rect):
-                print("CRASH!")
+            else:
+                if e.rect and player.get_rect().colliderect(e.rect):
+                    player.take_damage(1)
+                    enemies.remove(e) # Remove enemy on crash to avoid double collision
 
         for t in trees[:]:
             if t.update():
@@ -224,6 +275,15 @@ def main():
             scanline = pygame.Surface((WIDTH, 1), pygame.SRCALPHA)
             scanline.fill((0, 0, 0, 60))
             screen.blit(scanline, (0, y))
+
+        # Simple Score HUD
+        font = pygame.font.SysFont("Arial", 24)
+        score_text = font.render(f"Score: {score}", True, NEON_CYAN)
+        screen.blit(score_text, (10, 10))
+
+        if player.health <= 0:
+            print("GAME OVER!")
+            running = False
 
         pygame.display.flip()
         clock.tick(FPS)
